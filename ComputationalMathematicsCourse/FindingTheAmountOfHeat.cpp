@@ -2,6 +2,7 @@
 #include "Functions.h"
 #include <iomanip>
 #include <cassert>
+#include <vector>
 
 
 namespace KHAS {
@@ -20,10 +21,10 @@ namespace KHAS {
         std::string theme_header{ "Тема:" };
         std::string theme_name{ "Численное дифференцирование" };
 
-        std::string left_range_header{ "Минимальная граница:" };
-        std::string left_range_name{ typeToString(data_.left_range, 4).first };
-        std::string right_range_header{ "Максимальная граница:" };
-        std::string right_range_name{ typeToString(data_.right_range, 4ull).first };
+        std::string left_range_header{ "Точность:" };
+        std::string left_range_name{ typeToString(data_.accuracy, 4).first };
+        std::string right_range_header{ "Точность для Рунге-Кутта:" };
+        std::string right_range_name{ typeToString(data_.accuracy_for_kutt, 4).first };
         std::string step_header{ "Шаг:" };
         std::string step_name{ typeToString(data_.step, 4ull).first };
         std::string error_header{ "Погрешность:" };
@@ -59,6 +60,15 @@ namespace KHAS {
         out << delim << "\n";
     }
 
+    void FindingTheAmountOfHeatSingleton::init() noexcept
+    {
+        menu_.insert("Нахождение корня нелинейного уравнения методом хорд.", [&]() { findingTheRootOfANonlinearEquation(); });
+        menu_.insert("Решение дифференциального уравнения методом Рунге-Кутта четвертого порядка.", [&] {  });
+        menu_.insert("Нахождение с помощью линейной интерполяции приближенных значения функции.", [] {});
+        menu_.insert("Определение количества теплоты методом трапеций.", [] {});
+        menu_.insert("Выход", [] {});
+    }
+
     void FindingTheAmountOfHeatSingleton::showUnknownCommand(std::ostream& out) const noexcept
     {
         auto delim{ delimiter('-', width_screen_) };
@@ -67,23 +77,11 @@ namespace KHAS {
         out << delim << "\n";
     }
 
-    size_t FindingTheAmountOfHeatSingleton::showReadCommand(std::istream& in) const noexcept
-    {
-        size_t cmd;
-        std::string cmd_name{ "Введите команду:" };
-        std::cout << cmd_name << delimiter('_', width_screen_ - cmd_name.size())
-            << delimiter('\b', width_screen_ - cmd_name.size());
-
-        if (!(in >> cmd)) cmd = -1;
-        in.clear();
-        in.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        return cmd;
-    }
-
     void FindingTheAmountOfHeatSingleton::loop() const noexcept
     {
         size_t cmd{};
-        while (cmd != 3) {
+        size_t exit_code{ menu_.exitCode() };
+        while (cmd != exit_code) {
             system("cls");
             showHeader();
 
@@ -91,8 +89,53 @@ namespace KHAS {
 
             menu_.show();
 
-            cmd = showReadCommand();
+            cmd = showReadCommand<size_t>("Введите команду:").value_or(0);
         }
     }
+
+    double FindingTheAmountOfHeatSingleton::mathFunc(double x) const noexcept {
+        return 3 * pow(x, 4) + 8 * pow(x, 3) + 6 * pow(x, 2) - 10;
+    }
+
+    void FindingTheAmountOfHeatSingleton::findingTheRootOfANonlinearEquation() const noexcept {
+        auto left_range{ showReadCommand<double>("Введите нижнюю границу интервала изоляции корня нелинейного уравнения:").value_or(0) };
+        auto right_range{ showReadCommand<double>("Введите верхнюю границу интервала изоляции корня нелинейного уравнения:").value_or(0) };
+        
+        auto&& [result, count] { calculationFindingTheRootOfANonlinearEquation(left_range, right_range) };
+        printFindingTheRootOfANonlinearEquation(result, count);
+    }
+
+    std::pair<double, size_t> FindingTheAmountOfHeatSingleton::calculationFindingTheRootOfANonlinearEquation(double left_range, double right_range) const noexcept {
+        
+        assert(left_range - data_.accuracy > 0 || right_range - data_.accuracy > 0);
+        assert(data_.accuracy > 0.000001);
+
+        size_t count{};
+        double left_range_tmp{ left_range };
+        double right_range_tmp{ right_range };
+
+        while(fabs(right_range_tmp - left_range_tmp) > data_.accuracy) {
+            ++count;
+            auto math_left_range{ mathFunc(left_range) };
+            auto math_right_range{ mathFunc(right_range) };
+            auto tmp{ left_range - (math_left_range /(math_right_range - math_left_range) ) * (right_range- left_range) };
+            
+            left_range_tmp = std::exchange(right_range_tmp, tmp);
+
+            if (math_left_range * mathFunc(tmp) < 0) right_range = right_range_tmp;
+            else left_range = right_range_tmp;
+        }
+        return { right_range_tmp , count };
+    }
+
+
+    void FindingTheAmountOfHeatSingleton::printFindingTheRootOfANonlinearEquation(double x, size_t count_iterations) const noexcept {
+        std::cout << "x: " << x << "\n" << "count: " << count_iterations << "\n";
+    }
+
+
+
+
+
 
 }

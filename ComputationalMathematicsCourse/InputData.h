@@ -3,10 +3,10 @@
 namespace KHAS {
     struct InputData final
     {
-        double left_range;
-        double right_range;
         double step;
         double error;
+        double accuracy;
+        double accuracy_for_kutt;
     };
 
 }

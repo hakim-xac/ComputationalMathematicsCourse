@@ -35,4 +35,9 @@ namespace KHAS {
         return true;
     }
 
+    size_t Menu::exitCode() const noexcept
+    {
+        return buffer_.size() ? buffer_.size() : 1;
+    }
+
 }

@@ -11,7 +11,7 @@ namespace KHAS {
 
         void show(std::ostream& out = std::cout) const noexcept;
         bool runCommand(size_t cmd) const noexcept;
-
+        size_t exitCode() const noexcept;
         template <typename Name, typename Func>
             requires std::is_convertible_v<Name, std::string>
         void insert(Name&& name, Func&& func) noexcept;

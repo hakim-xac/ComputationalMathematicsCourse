@@ -6,7 +6,7 @@
 int main() {
 
     std::setlocale(LC_ALL, "Russian");
-    KHAS::FindingTheAmountOfHeatSingleton::getInstance(KHAS::InputData{}, 67 ).loop();
+    KHAS::FindingTheAmountOfHeatSingleton::getInstance(KHAS::InputData{ 0.042, 0.036, 0.001, 0.0001 }, 85 ).loop();
 
     return 0;
 }
