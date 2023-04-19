@@ -28,7 +28,7 @@ namespace KHAS {
         using opt_type = std::optional<value_type>;
 
         opt_type result;
-        value_type cmd;
+        value_type cmd{};
         std::string cmd_name{ std::forward<TString>(str) };
         std::cout << "| " << cmd_name << "  " << delimiter('_', width_screen_ - cmd_name.size() - 6) << " |"
             << delimiter('\b', width_screen_ - cmd_name.size()-4);

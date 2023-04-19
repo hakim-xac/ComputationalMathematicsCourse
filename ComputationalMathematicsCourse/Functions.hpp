@@ -22,17 +22,21 @@ namespace KHAS {
     }
 
     template <typename T>
-    [[nodiscard]] std::pair<std::string, bool> typeToString(T&& value) {
+    [[nodiscard]] std::optional<std::string> typeToString(T&& value) {
+
+        using opt_type = std::optional<std::string>;
+
         std::stringstream ss{ "" };
         ss << std::forward<T>(value);
-        return { ss.str(), ss.good() };
+        return ss.good() ? opt_type{ ss.str() } : std::nullopt;
     }
 
     template <typename T>
         requires std::is_floating_point_v<T>
-    [[nodiscard]] std::pair<std::string, bool> typeToString(const T& value, size_t prec) {
+    [[nodiscard]] std::optional<std::string> typeToString(const T& value, size_t prec) {
+        using opt_type = std::optional<std::string>;
         std::stringstream ss{ "" };
         ss << std::fixed << std::setprecision(prec) << precision(value, prec);
-        return { ss.str(), ss.good() };
+        return ss.good() ? opt_type{ ss.str() } : std::nullopt;
     }
 }
