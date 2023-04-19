@@ -20,14 +20,14 @@ namespace KHAS {
         std::string variant_header{ "Вариант:" };
         std::string variant_name{ "№1" };
         std::string theme_header{ "Тема:" };
-        std::string theme_name{ "Численное дифференцирование" };
+        std::string theme_name{ "Нахождение количества теплоты" };
 
         std::string left_range_header{ "Точность:" };
-        std::string left_range_name{ typeToString(data_.accuracy, 4).first };
+        std::string left_range_name{ typeToString(data_.accuracy, 4).value_or("") };
         std::string right_range_header{ "Точность для Рунге-Кутта:" };
-        std::string right_range_name{ typeToString(data_.accuracy_for_kutt, 4).first };
+        std::string right_range_name{ typeToString(data_.accuracy_for_kutt, 4).value_or("") };
         std::string error_header{ "Погрешность:" };
-        std::string error_name{ typeToString(data_.error, 4ull).first };
+        std::string error_name{ typeToString(data_.error, 4ull).value_or("") };
 
         size_t width{ (width_screen_ - 3) / 2 - 2 };
         size_t offset{ width_screen_ % 2 == 0 };
@@ -134,8 +134,19 @@ namespace KHAS {
     }
 
 
-    void FindingTheAmountOfHeatSingleton::printFindingTheRootOfANonlinearEquation(double x, size_t count_iterations) const noexcept {
-        std::cout << "x: " << x << "\n" << "count: " << count_iterations << "\n";
+    void FindingTheAmountOfHeatSingleton::printFindingTheRootOfANonlinearEquation(double x, size_t count_iterations, std::ostream& out) const noexcept {
+        auto delim{ delimiter('-', width_screen_) };
+        size_t left_width{ width_screen_ / 2 };
+        size_t right_width{ width_screen_ - left_width };
+        out << delim << "\n";
+        out << generateString("Корень нелинейного уравнения методом хорд", width_screen_) << "\n";
+        out << delim << "\n";
+        out << generateString("Нелинейное уравнение:", left_width) << generateString("f(x)=3x^4+8x^3+6x^2-10=0", right_width) << "\n";
+        out << delim << "\n";
+        out << generateString("X приближенный:", left_width) << generateString(typeToString(x).value_or(""), right_width) << "\n";
+        out << delim << "\n";
+        out << generateString("Количество итераций:", left_width) << generateString(typeToString(count_iterations).value_or(""), right_width) << "\n";
+        out << delim << "\n";
     }
 
 
@@ -191,12 +202,36 @@ namespace KHAS {
     }
 
 
-    void FindingTheAmountOfHeatSingleton::printRungeKuttaMethod() const noexcept {
+    void FindingTheAmountOfHeatSingleton::printRungeKuttaMethod(std::ostream& out) const noexcept {
+
+        auto delim{ delimiter('-', width_screen_) };
+        constexpr const size_t prec{ 4 };
+        size_t left_width{ width_screen_ / 2 };
+        size_t right_width{ width_screen_ - left_width };
+        size_t left_part_width{ width_screen_ / 5 };
+        size_t offset{ width_screen_ - left_part_width*5 };
+        size_t right_part_width{ left_part_width + offset };
+
+
+        out << delim << "\n";
+        out << generateString("Таблица решений дифференциального уравнения", width_screen_) << "\n";
+        out << generateString("методом Рунге-Кутта на интервале [0; 2], с точностью 0.0001", width_screen_) << "\n";
+        out << delim << "\n";
+        out << generateString("Дифференциальное уравнение:", left_width) << generateString("y'=1-sin(3*x+y)+y/(2+x)", right_width) << "\n";
+        out << delim << "\n";
+        out << generateString("Xi", left_part_width)
+            << generateString("Yi h=0.25", left_part_width)
+            << generateString("Yi (h/2)=0.125", left_part_width)
+            << generateString("Погрешность", left_part_width)
+            << generateString("Допустимая погр.", right_part_width) << "\n";
+        out << delim << "\n";
+
         for (auto&& elem: array_runge_kutta_) {
-            std::cout << precision(elem.a, 4) << " | "
-                << precision(elem.b, 4) << " | "
-                << precision(elem.c, 4) << " | "
-                << precision(elem.d, 4) << "\n";
+            out << generateString(typeToString(precision(elem.a, prec), prec).value_or("-"), left_part_width)
+                << generateString(typeToString(precision(elem.b, prec), prec).value_or("-"), left_part_width)
+                << generateString(typeToString(precision(elem.c, prec), prec).value_or("-"), left_part_width)
+                << generateString(typeToString(precision(elem.d, prec), prec).value_or("-"), left_part_width)
+                << generateString(typeToString(precision(0.0015, prec), prec).value_or("-"), right_part_width) << "\n";
         }
     }
 
@@ -234,11 +269,26 @@ namespace KHAS {
     }
 
 
-    void FindingTheAmountOfHeatSingleton::printLinearInterpolation() const noexcept {
+    void FindingTheAmountOfHeatSingleton::printLinearInterpolation(std::ostream& out) const noexcept {
+
+        auto delim{ delimiter('-', width_screen_) };
+        constexpr const size_t prec{ 4 };
+        size_t left_width{ width_screen_ / 2 };
+        size_t right_width{ width_screen_ - left_width };
+
+
+        out << delim << "\n";
+        out << generateString("Таблица интерполированных значений y", width_screen_) << "\n";
+        out << delim << "\n";
+        out << generateString("x", left_width)
+            << generateString("f(x) приближ.", left_width) << "\n";
+        out << delim << "\n";
+
 
         for (auto&& elem : array_linear_interpolation_) {
-            std::cout << precision(elem.first, 4) << " | "
-                << precision(elem.second, 4) << "\n";
+            out << generateString(typeToString(precision(elem.first, prec), prec).value_or("-"), left_width)
+                << generateString(typeToString(precision(elem.second, prec), prec).value_or("-"), left_width)
+                << "\n";
         }
     }
 
@@ -260,9 +310,22 @@ namespace KHAS {
     }
 
 
-    void FindingTheAmountOfHeatSingleton::printIntegralTrapezoidMethod() const noexcept {
+    void FindingTheAmountOfHeatSingleton::printIntegralTrapezoidMethod(std::ostream& out) const noexcept {
 
-        std::cout << "q:  " << calculateIntegralTrapezoidMethod() << "\n";
+        auto delim{ delimiter('-', width_screen_) };
+        constexpr const size_t prec{ 4 };
+        size_t left_width{ width_screen_ / 2 };
+        size_t right_width{ width_screen_ - left_width };
+
+        out << delim << "\n";
+        out << generateString("Определение количества теплоты методом трапеций", width_screen_) << "\n";
+        out << delim << "\n";
+        out << generateString("Количество теплоты, выделяющееся на единичном сопротивлении", width_screen_) << "\n";
+        out << generateString("за 2 единицы времени", width_screen_) << "\n";
+        out << delim << "\n";
+        out << generateString("Q =", left_width)
+            << generateString(typeToString(calculateIntegralTrapezoidMethod(), prec).value_or("-"), right_width) << "\n";
+        out << delim << "\n";
     }
 
 }
