@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <cassert>
 #include <vector>
+#include <numeric>
 
 
 namespace KHAS {
@@ -25,8 +26,6 @@ namespace KHAS {
         std::string left_range_name{ typeToString(data_.accuracy, 4).first };
         std::string right_range_header{ "Точность для Рунге-Кутта:" };
         std::string right_range_name{ typeToString(data_.accuracy_for_kutt, 4).first };
-        std::string step_header{ "Шаг:" };
-        std::string step_name{ typeToString(data_.step, 4ull).first };
         std::string error_header{ "Погрешность:" };
         std::string error_name{ typeToString(data_.error, 4ull).first };
 
@@ -41,7 +40,6 @@ namespace KHAS {
 
         assert(left_range_header.size() <= width && left_range_name.size() <= width);
         assert(right_range_header.size() <= width && right_range_name.size() <= width);
-        assert(step_header.size() <= width && step_name.size() <= width);
         assert(error_header.size() <= width && error_name.size() <= width);
 
 
@@ -54,7 +52,6 @@ namespace KHAS {
         out << delim << "\n";
         out << "| " << std::setw(width) << std::left << left_range_header << " | " << std::setw(width + offset) << std::right << left_range_name << " |\n";
         out << "| " << std::setw(width) << std::left << right_range_header << " | " << std::setw(width + offset) << std::right << right_range_name << " |\n";
-        out << "| " << std::setw(width) << std::left << step_header << " | " << std::setw(width + offset) << std::right << step_name << " |\n";
         out << "| " << std::setw(width) << std::left << error_header << " | " << std::setw(width + offset) << std::right << error_name << " |\n";
 
         out << delim << "\n";
@@ -62,10 +59,14 @@ namespace KHAS {
 
     void FindingTheAmountOfHeatSingleton::init() noexcept
     {
+
+        array_runge_kutta_ = rungeKuttaMethodInArray();
+        array_linear_interpolation_ = linearInterpolation(LinierInterpolation{ 0, 2, 0.1 });
+
         menu_.insert("Нахождение корня нелинейного уравнения методом хорд.", [&]() { findingTheRootOfANonlinearEquation(); });
-        menu_.insert("Решение дифференциального уравнения методом Рунге-Кутта четвертого порядка.", [&] {  });
-        menu_.insert("Нахождение с помощью линейной интерполяции приближенных значения функции.", [] {});
-        menu_.insert("Определение количества теплоты методом трапеций.", [] {});
+        menu_.insert("Решение дифференциального уравнения методом Рунге-Кутта четвертого порядка.", [&] { printRungeKuttaMethod(); });
+        menu_.insert("Нахождение с помощью линейной интерполяции приближенных значения функции.", [&] { printLinearInterpolation(); });
+        menu_.insert("Определение количества теплоты методом трапеций.", [&] { printIntegralTrapezoidMethod(); });
         menu_.insert("Выход", [] {});
     }
 
@@ -95,6 +96,10 @@ namespace KHAS {
 
     double FindingTheAmountOfHeatSingleton::mathFunc(double x) const noexcept {
         return 3 * pow(x, 4) + 8 * pow(x, 3) + 6 * pow(x, 2) - 10;
+    }
+
+    double FindingTheAmountOfHeatSingleton::mathFunc2(double x, double y) const noexcept {
+        return 1 - sin(3 * x + y) + (y / (2 + x));
     }
 
     void FindingTheAmountOfHeatSingleton::findingTheRootOfANonlinearEquation() const noexcept {
@@ -134,8 +139,130 @@ namespace KHAS {
     }
 
 
+    std::vector<FindingTheAmountOfHeatSingleton::DB> FindingTheAmountOfHeatSingleton::rungeKuttaMethodInArray() const noexcept {
+
+        double h{ 0.25 };
+        double x{};
+        double x2{ 2 };
+        auto&& [y, _] { calculationFindingTheRootOfANonlinearEquation(x, x2) };
+
+        double yy{ y };
+        double xx{ x };
+
+        auto num{ static_cast<size_t>(round(1 + (x2 - x) / h)) };
+        std::vector<DB> arr;
+        arr.emplace_back(DB{ x, y, y, 0 });
+
+        for (size_t i{ 1 }, ie{ num }; i != ie; ++i) {
+            DB db{};
+            db.a = xx + h;
+            db.b = mathRungeKutta(xx, yy, h);
+            db.c = calculateHalfHeight(x, y, h, i);
+            db.d = fabs(db.b - db.c);
+
+            xx += h;
+            yy = db.b;
+            arr.emplace_back(std::move(db));
+        }
+
+        return arr;
+    }
 
 
+    double FindingTheAmountOfHeatSingleton::calculateHalfHeight(double x, double y, double height, size_t step) const noexcept {
+        
+        double xx{ x };
+        double yy{y};
+        double h{ height / 2 };
+        for (size_t i{}, ie{2*step}; i != ie; ++i) {
+            yy = mathRungeKutta(xx, yy, h);
+            xx += h;
+        }
+        return yy;
+    }
 
+
+    double FindingTheAmountOfHeatSingleton::mathRungeKutta(double x, double y, double h) const noexcept {
+        double k{ mathFunc2(x, y) };
+        double k2{ mathFunc2(x+h/2, y+(h*k)/2) };
+        double k3{ mathFunc2(x+h/2, y+(h*k2)/2) };
+        double k4{ mathFunc2(x+h, y+h*k3) };
+        return y + (h * (k + 2 * k2 + 2 * k3 + k4)) / 6.0;
+    }
+
+
+    void FindingTheAmountOfHeatSingleton::printRungeKuttaMethod() const noexcept {
+        for (auto&& elem: array_runge_kutta_) {
+            std::cout << precision(elem.a, 4) << " | "
+                << precision(elem.b, 4) << " | "
+                << precision(elem.c, 4) << " | "
+                << precision(elem.d, 4) << "\n";
+        }
+    }
+
+
+    std::vector<std::pair<double, double>> FindingTheAmountOfHeatSingleton::linearInterpolation(const LinierInterpolation& lip) const noexcept {
+        std::vector<std::pair<double, double>> arr;
+        arr.reserve(static_cast<size_t>(round(1 + ((lip.right-lip.left) / lip.step))));
+
+        auto base{ rungeKuttaMethodInArray() };
+
+        for (double i{ lip.left }, ie{ lip.right }; i < ie; i += lip.step) {
+            auto fn{ searchInRungeKuttaArray(i, base) };
+            arr.emplace_back(i, mathLinearInterpolation(std::move(fn), i));
+        }
+        arr.emplace_back(lip.right, base.back().c);
+        return arr;
+    }
+
+
+    FindingTheAmountOfHeatSingleton::DB FindingTheAmountOfHeatSingleton::searchInRungeKuttaArray(double x, const std::vector<FindingTheAmountOfHeatSingleton::DB>& base) const noexcept {
+        
+        assert(base.size() > 0);
+
+        for (size_t i{}, ie{ base.size()-1 }; i != ie; ++i) {
+            if (x >= base[i].a && x <= base[i+1].a) {
+                return { base[i].a, base[i+1].a, base[i].c, base[i+1].c };
+            }
+        }
+        return DB{};
+    }
+
+
+    double FindingTheAmountOfHeatSingleton::mathLinearInterpolation(const DB& db, double x) const noexcept {
+        return db.c+(x-db.a)*((db.d-db.c)/(db.b-db.a));
+    }
+
+
+    void FindingTheAmountOfHeatSingleton::printLinearInterpolation() const noexcept {
+
+        for (auto&& elem : array_linear_interpolation_) {
+            std::cout << precision(elem.first, 4) << " | "
+                << precision(elem.second, 4) << "\n";
+        }
+    }
+
+
+    double FindingTheAmountOfHeatSingleton::calculateIntegralTrapezoidMethod() const noexcept {
+        double arithmetic_mean{ (integralMethod(array_linear_interpolation_.front().second)
+            + integralMethod(array_linear_interpolation_.back().second)) };
+
+        double sum{ std::accumulate(array_linear_interpolation_.begin(), array_linear_interpolation_.end(), 0.0, [&](double lhs, auto&& elem) {
+            return lhs + integralMethod(elem.second);
+            }) - arithmetic_mean };
+
+        return 0.1 * (arithmetic_mean / 2 + sum);
+    }
+
+
+    double FindingTheAmountOfHeatSingleton::integralMethod(double y) const noexcept {
+        return y * y;
+    }
+
+
+    void FindingTheAmountOfHeatSingleton::printIntegralTrapezoidMethod() const noexcept {
+
+        std::cout << "q:  " << calculateIntegralTrapezoidMethod() << "\n";
+    }
 
 }
